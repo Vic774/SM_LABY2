@@ -49,8 +49,9 @@
 
 /* USER CODE BEGIN PV */
 uint8_t Received[20];
-float temp;
-float press;
+float temp_flt;
+int temp;
+int sample_number = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -68,25 +69,53 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   if (htim == &htim3)
   {
 	  char str_buffer[32];
+	  char pomiar[10];
 
-	  temp = BMP280_ReadTemperature_degC(&hbmp280_1);
-	  sprintf(str_buffer, "Temperature: %2.3f\r\n", temp);
+	  temp_flt = BMP280_ReadTemperature_degC(&hbmp280_1);
+	  temp = (int)temp_flt;
+	  sprintf(str_buffer, "Temperature: %2.3f\r\n", temp_flt);
+	  send_string(str_buffer);
+
+	  // zadanie 6, generowanie danych do pliku csv
+//	  sprintf(str_buffer, "%8d,", sample_number);
+//	  sample_number = sample_number + 1;
+//	  sprintf(pomiar, "%2.3f\r\n", temp_flt);
+//	  strcat( str_buffer, pomiar);
+
 	  send_string(str_buffer);
   }
+}
 
-  if (htim == &htim4)
-    {
-  	  char str_buffer[32];
-
-  	  press = BMP280_ReadPressure_hPa(&hbmp280_1);
-  	  sprintf(str_buffer, "Pressure: %5.2f\r\n", press);
-  	  send_string(str_buffer);
-    }
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+//	char str_buffer[32];
+//	sprintf(str_buffer, "Sample number (step = 1s), Temp\r\n");
+//	send_string(str_buffer);
+//
+//	HAL_TIM_Base_Start_IT(&htim3);
 }
 
 void send_string(char* s)
 {
 	HAL_UART_Transmit_IT(&huart3, (uint8_t*)s, strlen(s));
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	uint8_t Data[5];
+	sprintf(Data, "%s",Received);
+	if(Data[0]=='P')
+	{
+		int value = atoi(&Data[1]);
+		if(value >= 0 && value <=100)
+		{
+			char str_buffer[32];
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, value-1);
+			sprintf(str_buffer, "PWM duty set at: %4d%% \r\n", value);
+			send_string(str_buffer);
+		}
+	}
+	HAL_UART_Receive_IT(&huart3, Received, 4);
 }
 /* USER CODE END 0 */
 
@@ -125,13 +154,14 @@ int main(void)
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim3);
-  HAL_Delay(1000);
   HAL_TIM_Base_Start_IT(&htim4);
+  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
   BMP280_Init(&hbmp280_1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  HAL_UART_Receive_IT(&huart3, Received, 4);
 
   while (1)
   {
