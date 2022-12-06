@@ -18,6 +18,8 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "adc.h"
+#include "dma.h"
 #include "spi.h"
 #include "tim.h"
 #include "usart.h"
@@ -51,7 +53,10 @@
 uint8_t Received[20];
 float temp_flt;
 int temp;
+float press_flt;
+int press;
 int sample_number = 0;
+int value;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -69,18 +74,25 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   if (htim == &htim3)
   {
 	  char str_buffer[32];
-	  char pomiar[10];
+	  char pomiar[22];
 
-	  temp_flt = BMP280_ReadTemperature_degC(&hbmp280_1);
+	  BMP280_ReadData(&hbmp280_1, &press_flt, &temp_flt);
+//	  temp_flt = BMP280_ReadTemperature_degC(&hbmp280_1);
 	  temp = (int)temp_flt;
-	  sprintf(str_buffer, "Temperature: %2.3f\r\n", temp_flt);
-	  send_string(str_buffer);
+//	  sprintf(str_buffer, "Temperature: %2.3f, ", temp_flt);
+
+
+//	  press_flt = BMP280_ReadPressure_hPa(&hbmp280_1);
+//	  press = (int)press_flt;
+//	  sprintf(pomiar, "Pressure: %5.2f\r\n", press_flt);
+//	  strcat( str_buffer, pomiar);
+
 
 	  // zadanie 6, generowanie danych do pliku csv
-//	  sprintf(str_buffer, "%8d,", sample_number);
-//	  sample_number = sample_number + 1;
-//	  sprintf(pomiar, "%2.3f\r\n", temp_flt);
-//	  strcat( str_buffer, pomiar);
+	  sprintf(str_buffer, "%8d,", sample_number);
+	  sample_number = sample_number + 1;
+	  sprintf(pomiar, "%2.3f\r\n", temp_flt);
+	  strcat( str_buffer, pomiar);
 
 	  send_string(str_buffer);
   }
@@ -106,7 +118,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	sprintf(Data, "%s",Received);
 	if(Data[0]=='P')
 	{
-		int value = atoi(&Data[1]);
+		value = atoi(&Data[1]);
 		if(value >= 0 && value <=100)
 		{
 			char str_buffer[32];
@@ -152,6 +164,8 @@ int main(void)
   MX_SPI4_Init();
   MX_TIM3_Init();
   MX_TIM4_Init();
+  MX_DMA_Init();
+  MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim3);
   HAL_TIM_Base_Start_IT(&htim4);
