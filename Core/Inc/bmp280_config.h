@@ -12,7 +12,7 @@
 #define BMP280_CS_PinType   uint16_t
 
 /* Define --------------------------------------------------------------------*/
-#define BMP280_SPI (&hspi4)
+#define BMP280_SPI (&hspi1)
 
 #define BMP280_SPI_BUFFER_LEN  28  //! @see BMP280 technical note p. 24
 #define BMP280_DATA_INDEX       1  //! @see BMP280 technical note p. 31-32
