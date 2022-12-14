@@ -18,8 +18,8 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "dma.h"
 #include "dac.h"
+#include "dma.h"
 #include "tim.h"
 #include "usart.h"
 #include "usb_otg.h"
@@ -28,8 +28,10 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "stdio.h"
+#include "stdlib.h"
 #include "string.h"
 #include "math.h"
+#include "signal.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -49,6 +51,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+uint8_t Received[20];
 float Reg;
 int voltage = 0;
 float scalar;
@@ -56,25 +59,28 @@ int Max_Voltage = 3300;
 float Max_Reg = 4095.0f;
 
 const float st = 0.001f;
-const float Amp = 1000.0f;
+float Amp = 1000.0f;
 const float DC_comp = 1000.0f;
 const float T = 0.1f;
 const float f = 1/T;
 
 float SIN_signal;
 float time = 0.0f;
+int signal_sample = 0;
+int wykres;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 
+// task #1
 void DAC_SetVoltage(int voltage_mv)
 {
 	scalar = (float)voltage_mv / (float)Max_Voltage;
 	Reg = scalar * Max_Reg;
 	Reg = (uint32_t)Reg;
-	//HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, Reg);
+	HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, Reg);
 }
 
 // timers callback
@@ -82,16 +88,26 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	if(htim == &htim4)
 	{
-		SIN_signal = Amp*sinf(2*M_PI*f*time) + DC_comp;
-		if(time >= T)
-		{
-			time = 0.0f;
-		}
-		else
-		{
-			time += st;
-		}
-		DAC_SetVoltage((int)SIN_signal);
+////		task #2 #3
+//		SIN_signal = Amp*sinf(2*M_PI*f*time) + DC_comp;
+//		if(time >= T)
+//		{
+//			time = 0.0f;
+//		}
+//		else
+//		{
+//			time += st;
+//		}
+//		DAC_SetVoltage((int)SIN_signal);
+
+////		task #4
+//		if(signal_sample >= SIGNAL_SIZE)
+//		{
+//			signal_sample = 0;
+//		}
+//
+//		wykres = sygnal[signal_sample];
+//		HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, sygnal[signal_sample++]);
 	}
 }
 
@@ -110,7 +126,20 @@ void send_string(char* s)
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-
+	uint8_t Data[6];
+	sprintf(Data, "%s",Received);
+	if(Data[0]=='A')
+	{
+		int value = atoi(&Data[1]);
+		if(value >= 0 && value <=1000)
+		{
+			char str_buffer[32];
+			sprintf(str_buffer, "Amplitude set at: %4d [mV] \r\n", value);
+			send_string(str_buffer);
+			Amp = value;
+		}
+	}
+	HAL_UART_Receive_IT(&huart3, Received, 5);
 }
 
 /* USER CODE END PFP */
@@ -162,7 +191,14 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   HAL_DAC_Start(&hdac, DAC_CHANNEL_1);
   HAL_TIM_Base_Start_IT(&htim4);
+
+//  task #5
+  HAL_DAC_Start_DMA(&hdac, DAC_CHANNEL_1, (uint32_t*)sygnal, SIGNAL_SIZE, DAC_ALIGN_12B_R);
+
   HAL_TIM_Base_Start(&htim6);
+  HAL_UART_Receive_IT(&huart3, Received, 5);
+
+
 
 
   while (1)
