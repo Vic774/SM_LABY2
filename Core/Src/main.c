@@ -20,7 +20,6 @@
 #include "main.h"
 #include "dac.h"
 #include "dma.h"
-#include "spi.h"
 #include "tim.h"
 #include "usart.h"
 #include "usb_otg.h"
@@ -28,9 +27,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "stdio.h"
-#include "string.h"
-#include "math.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -50,52 +47,23 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-float Reg;
-int voltage = 0;
-float scalar;
-const int Max_Voltage = 3300;
-const float Max_Reg = 4095.0f;
 
-// sinus parameters
-const float st = 0.001f;
-const float Amp = 1000.0f;
-const float DC_comp = 1000.0f;
-const float T = 0.1f;
-const float f = 1/T;
-
-float time = 0.0f;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 
-void DAC_SetVoltage(int voltage)
-{
-	scalar = (float)voltage / (float)Max_Voltage;
-	Reg = scalar * Max_Reg;
-	Reg = (uint32_t)Reg;
-	//HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, Reg);
-}
 
 // timers callback
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	if(htim == &htim4)
 	{
-		voltage = Amp*sinf(2*M_PI*f*time) + DC_comp;
-		if(time >= T)
-		{
-			time = 0.0f;
-		}
-		else
-		{
-			time += st;
-		}
 
-		//DAC_SetVoltage(voltage);
 	}
 }
+
 
 // GPIO callbacks
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
@@ -103,19 +71,17 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 
 }
 
+
 void send_string(char* s)
 {
 	HAL_UART_Transmit_IT(&huart3, (uint8_t*)s, strlen(s));
 }
 
 
-
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 
 }
-
-
 
 /* USER CODE END PFP */
 
@@ -156,13 +122,10 @@ int main(void)
   MX_DMA_Init();
   MX_USB_OTG_FS_PCD_Init();
   MX_DAC_Init();
-  MX_SPI1_Init();
   MX_TIM4_Init();
   MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
 
-  HAL_DAC_Start(&hdac, DAC_CHANNEL_1);
-  HAL_TIM_Base_Start_IT(&htim4);
   /* USER CODE END 2 */
 
   /* Infinite loop */
